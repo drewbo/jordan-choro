@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.background {
+  fill: none;
+  pointer-events: all;
+}
+
+.feature {
+  stroke: #fff;
+  stroke-width: 1px;
+  cursor: pointer;
+}
+
+</style>
+<body>
+  <div id="map"></div>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://d3js.org/topojson.v1.min.js"></script>
+  <script>
+
+  var width = 960,
+  height = 500;
+
+  var projection = d3.geo.albersUsa()
+  .scale(1000)
+  .translate([width / 2, height / 2]);
+
+  var path = d3.geo.path()
+  .projection(projection);
+
+  var svg = d3.select("#map").append("svg")
+  .attr("width", width + 200)
+  .attr("height", height);
+
+  svg.append("rect")
+  .attr("class", "background")
+  .attr("width", width)
+  .attr("height", height);
+
+  var g = svg.append("g");
+
+  d3.json("us_20m.topojson", function(error, us) {
+
+    var states = topojson.feature(us, us.objects.us_20m).features
+
+    var color = d3.scale.quantize()
+    .domain(d3.extent(states.map(function(state){ return +state.properties.Cost.replace(/[^0-9\.]+/g,""); })))
+    .range(["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"]);
+
+    g.selectAll("path")
+    .data(states)
+    .enter().append("path")
+    .attr("d", path)
+    .attr("class","feature")
+    .style('fill', function(d){
+      return color(+d.properties.Cost.replace(/[^0-9\.]+/g,""));
+    })
+    .on('mouseover', function(){
+      d3.select(this).style('fill','white')
+    })
+    .on('mouseout', function(){
+      d3.select(this).style('fill', function(d){
+        return color(+d.properties.Cost.replace(/[^0-9\.]+/g,""));
+      })
+    })
+
+    var legend = svg.selectAll('g.legendEntry')
+        .data(color.range())
+        .enter()
+        .append('g').attr('class', 'legendEntry');
+
+    legend
+        .append('rect')
+        .attr("x", width - 50)
+        .attr("y", function(d, i) {
+          return i * 20 + 50;
+        })
+        .attr("width", 10)
+        .attr("height", 10)
+        .style("stroke", "black")
+        .style("stroke-width", 1)
+        .style("fill", function(d){return d;});
+
+    legend
+        .append('text')
+        .attr("x", width - 30)
+        .attr("y", function(d, i) {
+          return i * 20 + 50;
+        })
+        .attr("dy", "0.8em")
+        .text(function(d,i) {
+          var extent = color.invertExtent(d);
+          var format = d3.format("$,.2r");
+          return format(+extent[0]) + " - " + format(+extent[1]);
+        });
+  });
+  </script>
